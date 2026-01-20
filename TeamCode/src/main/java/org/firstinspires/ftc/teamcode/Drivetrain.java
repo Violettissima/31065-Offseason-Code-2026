@@ -19,11 +19,11 @@ public class Drivetrain {
     private double speed = 1.0;
     private double xyTolerance = 0.5;
     private double angleTolerance = 2;
-    public enum DriveTrainState{
+    private enum DrivetrainState {
         MOVING,
         IDLE
     }
-    private DriveTrainState driveTrainState = DriveTrainState.IDLE;
+    private DrivetrainState state = DrivetrainState.IDLE;
 
     public void init(HardwareMap hwMap){
         FRdrive = hwMap.get(DcMotor.class, "RF");
@@ -45,13 +45,12 @@ public class Drivetrain {
     }
 
     public void drive(double forward, double right, double rotate){
-
         double frontRightPower = forward - right - rotate;
         double frontLeftPower = forward + right + rotate;
         double backRightPower = forward + right - rotate;
         double backLeftPower = forward - right + rotate;
-
         double maxSpeed = 1.0;
+
         maxSpeed = Math.max(maxSpeed, Math.abs(frontRightPower));
         maxSpeed = Math.max(maxSpeed, Math.abs(frontLeftPower));
         maxSpeed = Math.max(maxSpeed, Math.abs(backRightPower));
@@ -85,32 +84,42 @@ public class Drivetrain {
         double forward;
         double right;
         double rotate;
-        if (getY() < y) {
-            forward = (y - getY()) / 15 + 0.1;
+        double yDistance = y - getY() ;
+        double xDistance = x - getX() ;
+        double hDistance = AngleUnit.normalizeDegrees(h - getH());
+        if (yDistance > xyTolerance) {
+            forward = Math.min(Math.pow(yDistance / 10, 4) + 0.1, 1);
+        } else if (yDistance < -xyTolerance){
+            forward = Math.min(-Math.pow(yDistance / 10, 4) - 0.1, -1);
         } else {
-            forward = (y - getY()) / 15 - 0.1;
+            forward = 0;
         }
-        if (getX() < x) {
-            right = (x - getX()) / 15 + 0.1;
+        if (xDistance > xyTolerance) {
+            right = Math.min(Math.pow(xDistance / 10, 4) + 0.1, 1);
+        } else if (xDistance < -xyTolerance) {
+            right = Math.max(-Math.pow(xDistance / 10, 4) - 0.1, -1);
         } else {
-            right = (x - getX()) / 15 - 0.1;
+            right = 0;
         }
-        if (AngleUnit.normalizeDegrees(h - getH()) > 0){
-            rotate = -AngleUnit.normalizeDegrees(h - getH()) / 10 - 1;
+        if (hDistance > angleTolerance){
+            rotate = Math.max(-Math.pow(hDistance / 20, 4) - 0.05, -1);
+        } else if (hDistance < -angleTolerance){
+            rotate = Math.max(Math.pow(hDistance / 20, 4) + 0.05, 1);
         } else {
-            rotate = -AngleUnit.normalizeDegrees(h - getH()) / 10 + 1;
+            rotate = 0;
         }
         fieldCentricDrive(forward, right, rotate);
     }
 
     public void update(){
-        switch (driveTrainState) {
+        switch (state) {
             case MOVING:
                 if (getX() > targetX - xyTolerance && getX() < targetX + xyTolerance &&
                         getY() > targetY - xyTolerance && getY() < targetY + xyTolerance &&
                         AngleUnit.normalizeDegrees(targetAngle - getH()) > -angleTolerance &&
                         AngleUnit.normalizeDegrees(targetAngle - getH()) < angleTolerance){
-                    driveTrainState = DriveTrainState.IDLE;
+                    state = DrivetrainState.IDLE;
+                    drive(0, 0, 0);
                 } else {
                     moveToPos(targetX, targetY, targetAngle);
                 }
@@ -148,6 +157,10 @@ public class Drivetrain {
         return myOtos.getPosition().h;
     }
 
+    public boolean isBusy(){
+        return state != DrivetrainState.IDLE;
+    }
+
     public void setSpeed(double speed) {
         this.speed = speed;
     }
@@ -160,13 +173,10 @@ public class Drivetrain {
         this.angleTolerance = angleTolerance;
     }
 
-    public void setDriveTrainState(DriveTrainState state) {
-        driveTrainState = state;
-    }
-
-    public void setTarget(double x, double y, double h){
+    public void setTarget(double x, double y, double h) {
         targetX = x;
         targetY = y;
         targetAngle = h;
+        state = DrivetrainState.MOVING;
     }
 }
