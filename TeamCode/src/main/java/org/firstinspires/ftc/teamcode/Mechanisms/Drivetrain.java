@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.Mechanisms;
 
 import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 
 public class Drivetrain {
     private DcMotor FRdrive;
@@ -13,10 +14,10 @@ public class Drivetrain {
     private DcMotor BRdrive;
     private DcMotor BLdrive;
     SparkFunOTOS myOtos;
-    private double targetX = 0;
-    private double targetY = 0;
-    private double targetAngle = 0;
-    private double speed = 1.0;
+    private double targetX;
+    private double targetY;
+    private double targetAngle;
+    private double speed = 0.5;
     private double xyTolerance = 0.5;
     private double angleTolerance = 2;
     private enum DrivetrainState {
@@ -24,6 +25,9 @@ public class Drivetrain {
         IDLE
     }
     private DrivetrainState state = DrivetrainState.IDLE;
+
+    AprilTagWebcam aprilTagWebcam = new AprilTagWebcam();
+
 
     public void init(HardwareMap hwMap){
         FRdrive = hwMap.get(DcMotor.class, "RF");
@@ -42,6 +46,26 @@ public class Drivetrain {
         BLdrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         myOtos = hwMap.get(SparkFunOTOS.class, "sensor_otos");
         configureOtos();
+        aprilTagWebcam.init(hwMap);
+    }
+
+    public void update(){
+        switch (state) {
+            case MOVING:
+                if (getX() > targetX - xyTolerance && getX() < targetX + xyTolerance &&
+                        getY() > targetY - xyTolerance && getY() < targetY + xyTolerance &&
+                        AngleUnit.normalizeDegrees(targetAngle - getH()) > -angleTolerance &&
+                        AngleUnit.normalizeDegrees(targetAngle - getH()) < angleTolerance){
+                    state = DrivetrainState.IDLE;
+                    drive(0, 0, 0);
+                } else {
+                    moveToPos(targetX, targetY, targetAngle);
+                }
+                break;
+            case IDLE:
+                break;
+        }
+        aprilTagWebcam.update();
     }
 
     public void drive(double forward, double right, double rotate){
@@ -84,49 +108,55 @@ public class Drivetrain {
         double forward;
         double right;
         double rotate;
-        double yDistance = y - getY() ;
-        double xDistance = x - getX() ;
+        double yDistance = y - getY();
+        double xDistance = x - getX();
         double hDistance = AngleUnit.normalizeDegrees(h - getH());
+        // hDistance is how many degrees the robot would have to go left
         if (yDistance > xyTolerance) {
-            forward = Math.min(Math.pow(yDistance / 10, 4) + 0.1, 1);
+            forward = Math.min(yDistance / 10 + 0.05, 1);
         } else if (yDistance < -xyTolerance){
-            forward = Math.min(-Math.pow(yDistance / 10, 4) - 0.1, -1);
+            forward = Math.max(yDistance / 10 - 0.05, -1);
         } else {
             forward = 0;
         }
         if (xDistance > xyTolerance) {
-            right = Math.min(Math.pow(xDistance / 10, 4) + 0.1, 1);
+            right = Math.min(xDistance / 10 + 0.1, 1);
         } else if (xDistance < -xyTolerance) {
-            right = Math.max(-Math.pow(xDistance / 10, 4) - 0.1, -1);
+            right = Math.max(xDistance / 10 - 0.1, -1);
         } else {
             right = 0;
         }
         if (hDistance > angleTolerance){
-            rotate = Math.max(-Math.pow(hDistance / 20, 4) - 0.05, -1);
+            // robot should go left
+            rotate = Math.max(-hDistance / 35 - 0.15, -1);
         } else if (hDistance < -angleTolerance){
-            rotate = Math.max(Math.pow(hDistance / 20, 4) + 0.05, 1);
+            // robot should go right
+            rotate = Math.max(-hDistance / 35 + 0.15, 1);
         } else {
             rotate = 0;
         }
         fieldCentricDrive(forward, right, rotate);
     }
 
-    public void update(){
-        switch (state) {
-            case MOVING:
-                if (getX() > targetX - xyTolerance && getX() < targetX + xyTolerance &&
-                        getY() > targetY - xyTolerance && getY() < targetY + xyTolerance &&
-                        AngleUnit.normalizeDegrees(targetAngle - getH()) > -angleTolerance &&
-                        AngleUnit.normalizeDegrees(targetAngle - getH()) < angleTolerance){
-                    state = DrivetrainState.IDLE;
-                    drive(0, 0, 0);
-                } else {
-                    moveToPos(targetX, targetY, targetAngle);
-                }
-                break;
-            case IDLE:
-                break;
+    public void driveAndAim(double forward, double right) {
+        AprilTagDetection id20 = aprilTagWebcam.getTagById(20);
+        double hDistance;
+        if (id20 != null) {
+            hDistance = id20.ftcPose.bearing;
+        } else {
+            hDistance = 0 - getH();
         }
+        double rotate;
+        if (hDistance > angleTolerance){
+            // robot should go left
+            rotate = Math.max(-hDistance / 35, -1);
+        } else if (hDistance < -angleTolerance){
+            // robot should go right
+            rotate = Math.max(-hDistance / 35, 1);
+        } else {
+            rotate = 0;
+        }
+        fieldCentricDrive(forward, right, rotate);
     }
 
     private void configureOtos() {
@@ -143,6 +173,10 @@ public class Drivetrain {
         SparkFunOTOS.Version hwVersion = new SparkFunOTOS.Version();
         SparkFunOTOS.Version fwVersion = new SparkFunOTOS.Version();
         myOtos.getVersionInfo(hwVersion, fwVersion);
+    }
+
+    public void resetOtos() {
+        myOtos.resetTracking();
     }
 
     public double getX(){
@@ -178,5 +212,13 @@ public class Drivetrain {
         targetY = y;
         targetAngle = h;
         state = DrivetrainState.MOVING;
+    }
+
+    public void cancelPath() {
+        state = DrivetrainState.IDLE;
+    }
+
+    public DrivetrainState getState() {
+        return state;
     }
 }
