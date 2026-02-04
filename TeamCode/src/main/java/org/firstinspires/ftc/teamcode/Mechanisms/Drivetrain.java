@@ -3,29 +3,38 @@ package org.firstinspires.ftc.teamcode.Mechanisms;
 import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 
 public class Drivetrain {
-    private DcMotor FRdrive;
-    private DcMotor FLdrive;
-    private DcMotor BRdrive;
-    private DcMotor BLdrive;
-    SparkFunOTOS myOtos;
-    private double targetX;
-    private double targetY;
-    private double targetAngle;
+    private final double KP = 0;
+    private final double KI = 0;
+    private final double KD = 0;
+    private double aimKP = 0;
+    private double aimKD = 0;
     private double speed = 0.5;
     private double xyTolerance = 0.5;
     private double angleTolerance = 2;
+    private double targetX;
+    private double targetY;
+    private double targetAngle;
+    private double lastYError;
+    private double lastXError;
+    private double integralSum = 0;
+    private ElapsedTime PIDTimer;
     private enum DrivetrainState {
         MOVING,
         IDLE
     }
     private DrivetrainState state = DrivetrainState.IDLE;
-
+    private DcMotor FRdrive;
+    private DcMotor FLdrive;
+    private DcMotor BRdrive;
+    private DcMotor BLdrive;
+    SparkFunOTOS myOtos;
     AprilTagWebcam aprilTagWebcam = new AprilTagWebcam();
 
 
@@ -47,6 +56,10 @@ public class Drivetrain {
         myOtos = hwMap.get(SparkFunOTOS.class, "sensor_otos");
         configureOtos();
         aprilTagWebcam.init(hwMap);
+    }
+
+    public void start() {
+        PIDTimer.reset();
     }
 
     public void update(){
@@ -104,7 +117,7 @@ public class Drivetrain {
         drive(newForward, newRight, rotate);
     }
 
-    public void moveToPos(double x, double y, double h){
+    private void moveToPos(double x, double y, double h){
         double forward;
         double right;
         double rotate;
@@ -138,11 +151,31 @@ public class Drivetrain {
         fieldCentricDrive(forward, right, rotate);
     }
 
-    public void driveAndAim(double forward, double right) {
-        AprilTagDetection id20 = aprilTagWebcam.getTagById(20);
+    private void moveToPosPID(double x, double y, double h){
+        double forward;
+        double right;
+        double derivative;
+        double yError = y - getY();
+        double xError = x - getX();
+
+        integralSum = integralSum + xError * PIDTimer.seconds();
+        derivative = (yError - lastYError) / PIDTimer.seconds();
+        forward = KP * yError + KI * integralSum + KD * derivative;
+        integralSum = integralSum + xError * PIDTimer.seconds();
+        derivative = (xError - lastXError) / PIDTimer.seconds();
+        right = KP * xError + KI * integralSum + KD * derivative;
+        fieldCentricDrive(forward, right, 0);
+
+        lastYError = yError;
+        lastXError = xError;
+        PIDTimer.reset();
+    }
+
+    public void driveAndAim(double forward, double right, int id) {
+        AprilTagDetection tag = aprilTagWebcam.getTagById(id);
         double hDistance;
-        if (id20 != null) {
-            hDistance = id20.ftcPose.bearing;
+        if (tag != null) {
+            hDistance = tag.ftcPose.bearing;
         } else {
             hDistance = 0 - getH();
         }

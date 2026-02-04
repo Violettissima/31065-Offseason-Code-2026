@@ -40,11 +40,11 @@ VioletsTeleOp extends OpMode {
             drivetrain.setSpeed(0.5);
         }
 
-        if (gamepad1.right_bumper){
+        if (aligning) {
+            drivetrain.driveAndAim(-gamepad1.left_stick_y, gamepad1.left_stick_x, 20);
+        } else  if (gamepad1.right_bumper){
             drivetrain.setTarget(0, 0, 0);
-        } else if (aligning) {
-            drivetrain.driveAndAim(-gamepad1.left_stick_y, gamepad1.left_stick_x);
-        } else if (gamepad1.left_bumper) {
+        }else if (gamepad1.left_bumper) {
             drivetrain.cancelPath();
             drivetrain.drive(-gamepad1.left_stick_y, gamepad1.left_stick_x, gamepad1.right_stick_x);
         } else {

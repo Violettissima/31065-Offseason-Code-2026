@@ -16,7 +16,6 @@ public class WebcamTest extends OpMode {
     public void init() {
         aprilTagWebcam.init(hardwareMap);
         drivetrain.init(hardwareMap);
-        drivetrain.setSpeed(0.1);
     }
 
     @Override

@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 public class Intake {
     private DcMotor intake1;
     private DcMotor intake2;
+
     public void init(HardwareMap hwMap) {
         intake1 = hwMap.get(DcMotor.class, "M");
         intake2 = hwMap.get(DcMotor.class, "M2");

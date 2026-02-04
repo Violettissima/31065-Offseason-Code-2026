@@ -27,6 +27,11 @@ public class VioletsAuto extends OpMode {
     }
 
     @Override
+    public void start() {
+        drivetrain.start();
+    }
+
+    @Override
     public void loop() {
 
         switch(state) {
