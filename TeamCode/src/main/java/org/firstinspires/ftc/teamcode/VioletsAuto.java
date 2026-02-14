@@ -22,7 +22,7 @@ public class VioletsAuto extends OpMode {
 
     @Override
     public void init() {
-        drivetrain.init(hardwareMap);
+        drivetrain.init(hardwareMap, telemetry);
         drivetrain.setSpeed(0.25);
     }
 
