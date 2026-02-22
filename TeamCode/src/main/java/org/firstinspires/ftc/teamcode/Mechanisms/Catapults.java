@@ -12,16 +12,17 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 public class Catapults {
-    private int catapultBackPos = 2700;
     private final double SERVO_CLOSE_TIME = 0.5;
     private final double CATAPULT_LAUNCH_TIME = 0.5;
     private final double LAUNCH_INTERVAL = 0.5;
-    private boolean catapult1Released = true;
-    private boolean catapult2Released = true;
-    private boolean catapult3Released = true;
+    private final double CATAPULT_TOLERANCE = 0.01;
+    private int catapultBackPos = 2700;
+    private double shotPower = 0.2;
+    private int motifStage = 0;
     private boolean timerSet;
     private DcMotor catapult1;
     private DcMotor catapult2;
+    private boolean[] catapultReleased = {false, false, false};
     private Servo[] releases = new Servo[3];
     private NormalizedColorSensor[] colorSensors = new NormalizedColorSensor[3];
     private TouchSensor touchSensor;
@@ -72,16 +73,11 @@ public class Catapults {
     }
 
     public void update() {
-        telemetry.addData("Color Detected", getColor(0));
-        telemetry.addData("0", motif[0]);
-        telemetry.addData("1", motif[1]);
-        telemetry.addData("2", motif[2]);
         switch(state) {
             case RELOAD_PULL_BACK:
                 setCatapultPos(0);
                 if (touchSensor.isPressed()) {
-                    catapultBackPos = catapult1.getCurrentPosition() + 70;
-                    setCatapultPos(0);
+                    catapultBackPos = catapult1.getCurrentPosition() + 100;
                     state = CatapultState.RELOAD_SERVO_CLOSE;
                     stateTimer.reset();
                 }
@@ -93,14 +89,15 @@ public class Catapults {
                 }
                 break;
             case SET_SHOT_POWER:
-                setCatapultPos(0.2);
-                if (!catapult1.isBusy()) {
+                setCatapultPos(shotPower);
+                if (shotPower - CATAPULT_TOLERANCE < getCatapultPos()  && getCatapultPos() < CATAPULT_TOLERANCE + shotPower) {
                     state = CatapultState.IDLE;
                     timerSet = false;
                 }
                 break;
             case IDLE:
-                if (catapult1Released && catapult2Released && catapult3Released) {
+                setCatapultPos(shotPower);
+                if (catapultReleased[0] && catapultReleased[1] && catapultReleased[2]) {
                     // Wait until sure that the last catapult has fully fired
                     if (!timerSet) {
                         stateTimer.reset();
@@ -111,10 +108,10 @@ public class Catapults {
                 }
                 break;
             case AUTO_SHOOT:
-                if (!catapult1Released && !catapult2Released && !catapult3Released) {
+                if (!catapultReleased[0] && !catapultReleased[1] && !catapultReleased[2]) {
                     fireNextCatapult();
                     stateTimer.reset();
-                } else if (!catapult1Released || !catapult2Released || !catapult3Released) {
+                } else if (!catapultReleased[0] || !catapultReleased[1] || !catapultReleased[2]) {
                     if (stateTimer.seconds() >= LAUNCH_INTERVAL) {
                         fireNextCatapult();
                         stateTimer.reset();
@@ -126,15 +123,24 @@ public class Catapults {
                 }
                 break;
         }
+        for (int i = 0; i < 3; i++) {
+            catapultColors[i] = getColor(i);
+        }
     }
 
     private void fireNextCatapult() {
         for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                if (motif[i] == catapultColors[j]) {
-                    releaseCatapult(j);
-                    break;
-                }
+            if (motif[motifStage] == catapultColors[i] && !catapultReleased[i]) {
+                releaseCatapult(i);
+                motifStage++;
+                return;
+            }
+        }
+        for (int i = 0; i < 3; i++) {
+            if (!catapultReleased[i]) {
+                releaseCatapult(i);
+                motifStage++;
+                return;
             }
         }
     }
@@ -154,14 +160,12 @@ public class Catapults {
     public void releaseCatapult(int catapultNum) {
         if (catapultNum == 0) {
             releases[0].setPosition(0.3);
-            catapult1Released = true;
         } else if (catapultNum == 1) {
             releases[1].setPosition(0.67);
-            catapult2Released = true;
         } else if (catapultNum == 2) {
             releases[2].setPosition(0.75);
-            catapult3Released = true;
         }
+        catapultReleased[catapultNum] = true;
     }
 
     private void setCatapultPos(double power) {
@@ -169,17 +173,21 @@ public class Catapults {
         catapult1.setTargetPosition(position);
         catapult2.setTargetPosition(position);
     }
+
+    private double getCatapultPos() {
+        return (double) 1 - (double) catapult1.getCurrentPosition() / catapultBackPos;
+    }
     private void closeServos() {
         releases[0].setPosition(0.7);
         releases[1].setPosition(0.22);
         releases[2].setPosition(0.35);
-        catapult1Released = false;
-        catapult2Released = false;
-        catapult3Released = false;
+        catapultReleased[0] = false;
+        catapultReleased[1] = false;
+        catapultReleased[2] = false;
     }
 
     public void reload() {
-        if (catapult1Released || catapult2Released || catapult3Released) {
+        if (catapultReleased[0] || catapultReleased[1] || catapultReleased[2]) {
             state = CatapultState.RELOAD_PULL_BACK;
         }
     }
@@ -196,5 +204,10 @@ public class Catapults {
         } else if (tagId == 23) {
             motif = new Color[] {Color.PURPLE, Color.PURPLE, Color.GREEN};
         }
+    }
+
+    public void autoShoot() {
+        state = CatapultState.AUTO_SHOOT;
+        motifStage = 0;
     }
 }

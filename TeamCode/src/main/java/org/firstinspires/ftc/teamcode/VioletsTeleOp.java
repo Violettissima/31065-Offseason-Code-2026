@@ -6,7 +6,6 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import org.firstinspires.ftc.teamcode.Mechanisms.AprilTagWebcam;
 import org.firstinspires.ftc.teamcode.Mechanisms.Catapults;
 import org.firstinspires.ftc.teamcode.Mechanisms.Drivetrain;
-import org.firstinspires.ftc.teamcode.Mechanisms.Guides;
 import org.firstinspires.ftc.teamcode.Mechanisms.Intake;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 
@@ -16,7 +15,6 @@ public class VioletsTeleOp extends OpMode {
     Drivetrain drivetrain = new Drivetrain();
     Catapults catapults = new Catapults();
     Intake muncher = new Intake();
-    Guides guides = new Guides();
     public AprilTagWebcam aprilTagWebcam = new AprilTagWebcam();
     int stepIndex = 0;
     double[] stepSizes = {0.01, 0.001, 0.0001, 0.00001};
@@ -26,13 +24,16 @@ public class VioletsTeleOp extends OpMode {
         catapults.init(hardwareMap, telemetry);
         drivetrain.init(hardwareMap, telemetry);
         muncher.init(hardwareMap);
-        guides.init(hardwareMap);
         aprilTagWebcam.init(hardwareMap, telemetry);
         drivetrain.setXyTolerance(1);
     }
 
     @Override
     public void loop(){
+        catapults.update();
+        drivetrain.update();
+        aprilTagWebcam.update();
+        catapults.setMotif(aprilTagWebcam.getMotif());
 
         if (gamepad1.dpadDownWasPressed()) {
             aligning = !aligning;
@@ -48,15 +49,14 @@ public class VioletsTeleOp extends OpMode {
 
         if (aligning) {
             AprilTagDetection id20 = aprilTagWebcam.getTagById(20);
-            drivetrain.driveAndAim(-gamepad1.left_stick_y, gamepad1.left_stick_x, id20);
+            drivetrain.setAiming();
+            drivetrain.temporaryDriveAndAim(-gamepad1.left_stick_y, gamepad1.left_stick_x, gamepad1.right_stick_x, id20);
             telemetry.addLine("Aiming");
-        } else if (gamepad1.right_bumper){
-            drivetrain.setTarget(0, 0, 0);
-        }else if (gamepad1.left_bumper) {
-            drivetrain.cancelPath();
+        } else if (gamepad1.left_bumper) {
+            drivetrain.setIdle();
             drivetrain.driveRobotCentric(-gamepad1.left_stick_y, gamepad1.left_stick_x, gamepad1.right_stick_x);
         } else {
-            drivetrain.cancelPath();
+            drivetrain.setIdle();
             drivetrain.drive(-gamepad1.left_stick_y, gamepad1.left_stick_x, gamepad1.right_stick_x);
         }
 
@@ -71,7 +71,9 @@ public class VioletsTeleOp extends OpMode {
         if (!catapults.isBusy()) {
             if (gamepad1.a) {
                 catapults.reload();
-            } else if (!gamepad1.dpad_right && !gamepad1.dpad_left && !gamepad1.dpad_up){
+            } else if (gamepad2.a) {
+                catapults.autoShoot();
+            } else {
                 if (gamepad1.x) {
                     catapults.releaseCatapult(0);
                 }
@@ -85,31 +87,33 @@ public class VioletsTeleOp extends OpMode {
         }
 
         if (gamepad1.dpad_left) {
-            guides.move(Guides.Direction.LEFT);
+            muncher.moveGuides(Intake.Direction.LEFT);
         } else if (gamepad1.dpad_right) {
-            guides.move(Guides.Direction.RIGHT);
+            muncher.moveGuides(Intake.Direction.RIGHT);
         } else if (gamepad1.dpad_up) {
-            guides.move(Guides.Direction.CROSS);
+            muncher.moveGuides(Intake.Direction.CROSS);
         } else {
-            guides.move(Guides.Direction.OPEN);
+            muncher.moveGuides(Intake.Direction.OPEN);
         }
 
         if (gamepad1.start) {
             drivetrain.resetOtos();
         }
 
-        catapults.update();
-        drivetrain.update();
-        aprilTagWebcam.update();
-        catapults.setMotif(aprilTagWebcam.getMotif());
-
-        telemetry.addData("kp", drivetrain.KP);
-        telemetry.addData("kd", drivetrain.KD);
-        telemetry.addData("ki", drivetrain.KI);
-        telemetry.addData("stepsize", stepSizes[stepIndex]);
-        telemetry.addData("Drivetrain busy", drivetrain.isBusy());
-        telemetry.addData("x", drivetrain.getX());
-        telemetry.addData("y", drivetrain.getY());
-        telemetry.addData("h", drivetrain.getH());
+        {
+            if (gamepad2.bWasPressed()) {
+                stepIndex = (stepIndex + 1) % stepSizes.length;
+            }
+            if (gamepad2.dpadLeftWasPressed()) {
+                drivetrain.ANGLE_KP -= stepSizes[stepIndex];
+            } else if (gamepad2.dpadRightWasPressed()) {
+                drivetrain.ANGLE_KP += stepSizes[stepIndex];
+            }
+            if (gamepad2.dpadUpWasPressed()) {
+                drivetrain.ANGLE_KD += stepSizes[stepIndex];
+            } else if (gamepad2.dpadDownWasPressed()) {
+                drivetrain.ANGLE_KD -= stepSizes[stepIndex];
+            }
+        }
     }
 }
