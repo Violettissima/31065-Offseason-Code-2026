@@ -36,24 +36,24 @@ public class VioletsAuto extends OpMode {
 
         switch(state) {
             case START_CENTER:
-                drivetrain.setTarget(30, 30, 0);
+                drivetrain.setTarget(10, 10, 0);
                 state = State.UPPER_RIGHT;
                 break;
             case UPPER_RIGHT:
                 if (!drivetrain.isBusy()) {
-                    drivetrain.setTarget(30, -30, 0);
+                    drivetrain.setTarget(10, -10, 0);
                     state = State.LOWER_RIGHT;
                 }
                 break;
             case LOWER_RIGHT:
                 if (!drivetrain.isBusy()) {
-                    drivetrain.setTarget(-30, -30, 0);
+                    drivetrain.setTarget(-10, -10, 0);
                     state = State.LOWER_LEFT;
                 }
                 break;
             case LOWER_LEFT:
                 if (!drivetrain.isBusy()) {
-                    drivetrain.setTarget(-30, 30, 0);
+                    drivetrain.setTarget(-10, 10, 0);
                     state = State.UPPER_LEFT;
                 }
                 break;

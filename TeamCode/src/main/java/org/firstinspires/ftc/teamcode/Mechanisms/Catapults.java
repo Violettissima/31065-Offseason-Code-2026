@@ -8,6 +8,7 @@ import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
@@ -19,6 +20,7 @@ public class Catapults {
     private int catapultBackPos = 2700;
     private double shotPower = 0.2;
     private int motifStage = 0;
+    private boolean motifSet = false;
     private boolean timerSet;
     private DcMotor catapult1;
     private DcMotor catapult2;
@@ -73,6 +75,9 @@ public class Catapults {
     }
 
     public void update() {
+        telemetry.addData("catapultBackPos", catapultBackPos);
+        telemetry.addData("catapult encoder 1", catapult1.getCurrentPosition());
+        telemetry.addData("catapult encoder 2", catapult2.getCurrentPosition());
         switch(state) {
             case RELOAD_PULL_BACK:
                 setCatapultPos(0);
@@ -83,6 +88,8 @@ public class Catapults {
                 }
                 break;
             case RELOAD_SERVO_CLOSE:
+                setCatapultPos(0);
+                telemetry.setAutoClear(false);
                 closeServos();
                 if (stateTimer.seconds() >= SERVO_CLOSE_TIME) {
                     state = CatapultState.SET_SHOT_POWER;
@@ -108,6 +115,7 @@ public class Catapults {
                 }
                 break;
             case AUTO_SHOOT:
+                setCatapultPos(shotPower);
                 if (!catapultReleased[0] && !catapultReleased[1] && !catapultReleased[2]) {
                     fireNextCatapult();
                     stateTimer.reset();
@@ -204,10 +212,20 @@ public class Catapults {
         } else if (tagId == 23) {
             motif = new Color[] {Color.PURPLE, Color.PURPLE, Color.GREEN};
         }
+        motifSet = true;
     }
 
     public void autoShoot() {
         state = CatapultState.AUTO_SHOOT;
         motifStage = 0;
+    }
+
+    public void setShotPower(double distanceIn) {
+        double power = 0;
+        shotPower = Range.clip(power, 0, 1);
+    }
+
+    public boolean isMotifSet() {
+        return motifSet;
     }
 }

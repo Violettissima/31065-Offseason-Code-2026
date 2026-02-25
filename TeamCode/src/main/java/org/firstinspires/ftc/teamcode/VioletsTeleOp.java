@@ -15,7 +15,7 @@ public class VioletsTeleOp extends OpMode {
     Drivetrain drivetrain = new Drivetrain();
     Catapults catapults = new Catapults();
     Intake muncher = new Intake();
-    public AprilTagWebcam aprilTagWebcam = new AprilTagWebcam();
+    AprilTagWebcam aprilTagWebcam = new AprilTagWebcam();
     int stepIndex = 0;
     double[] stepSizes = {0.01, 0.001, 0.0001, 0.00001};
 
@@ -71,7 +71,7 @@ public class VioletsTeleOp extends OpMode {
         if (!catapults.isBusy()) {
             if (gamepad1.a) {
                 catapults.reload();
-            } else if (gamepad2.a) {
+            } else if (gamepad1.right_bumper && catapults.isMotifSet()) {
                 catapults.autoShoot();
             } else {
                 if (gamepad1.x) {

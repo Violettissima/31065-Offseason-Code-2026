@@ -160,6 +160,7 @@ public class Drivetrain {
             lastAngleError = angleError;
         } else {
             rotate = 0;
+            lastAngleError = 0;
         }
         drive(forward, right, rotate);
     }
@@ -210,7 +211,7 @@ public class Drivetrain {
     }
 
     private void configureOtos() {
-        myOtos.setLinearUnit(DistanceUnit.CM);
+        myOtos.setLinearUnit(DistanceUnit.INCH);
         myOtos.setAngularUnit(AngleUnit.DEGREES);
         SparkFunOTOS.Pose2D offset = new SparkFunOTOS.Pose2D(0, 0, 0);
         myOtos.setOffset(offset);

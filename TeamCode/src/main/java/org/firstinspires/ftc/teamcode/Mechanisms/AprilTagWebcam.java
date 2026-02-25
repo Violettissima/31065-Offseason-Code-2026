@@ -38,7 +38,7 @@ public class AprilTagWebcam {
         builder.addProcessor(aprilTagProcessor);
         visionPortal = builder.build();
         this.telemetry = telemetry;
-        setManualExposure(3, 500);
+        setManualExposure(4, 500);
 
     }
 
