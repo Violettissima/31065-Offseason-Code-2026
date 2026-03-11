@@ -16,8 +16,6 @@ public class VioletsTeleOp extends OpMode {
     Catapults catapults = new Catapults();
     Intake muncher = new Intake();
     AprilTagWebcam aprilTagWebcam = new AprilTagWebcam();
-    int stepIndex = 0;
-    double[] stepSizes = {0.01, 0.001, 0.0001, 0.00001};
 
     @Override
     public void init(){
@@ -34,6 +32,17 @@ public class VioletsTeleOp extends OpMode {
         drivetrain.update();
         aprilTagWebcam.update();
         catapults.setMotif(aprilTagWebcam.getMotif());
+        AprilTagDetection id20 = aprilTagWebcam.getTagById(20);
+
+        if (gamepad1.dpad_left) {
+            muncher.moveGuides(Intake.Direction.LEFT);
+        } else if (gamepad1.dpad_right) {
+            muncher.moveGuides(Intake.Direction.RIGHT);
+        } else if (gamepad1.dpad_up) {
+            muncher.moveGuides(Intake.Direction.CROSS);
+        } else {
+            muncher.moveGuides(Intake.Direction.OPEN);
+        }
 
         if (gamepad1.dpadDownWasPressed()) {
             aligning = !aligning;
@@ -48,7 +57,6 @@ public class VioletsTeleOp extends OpMode {
         }
 
         if (aligning) {
-            AprilTagDetection id20 = aprilTagWebcam.getTagById(20);
             drivetrain.setAiming();
             drivetrain.temporaryDriveAndAim(-gamepad1.left_stick_y, gamepad1.left_stick_x, gamepad1.right_stick_x, id20);
             telemetry.addLine("Aiming");
@@ -86,34 +94,17 @@ public class VioletsTeleOp extends OpMode {
             }
         }
 
-        if (gamepad1.dpad_left) {
-            muncher.moveGuides(Intake.Direction.LEFT);
-        } else if (gamepad1.dpad_right) {
-            muncher.moveGuides(Intake.Direction.RIGHT);
-        } else if (gamepad1.dpad_up) {
-            muncher.moveGuides(Intake.Direction.CROSS);
-        } else {
-            muncher.moveGuides(Intake.Direction.OPEN);
-        }
-
         if (gamepad1.start) {
             drivetrain.resetOtos();
         }
 
-        {
-            if (gamepad2.bWasPressed()) {
-                stepIndex = (stepIndex + 1) % stepSizes.length;
-            }
-            if (gamepad2.dpadLeftWasPressed()) {
-                drivetrain.ANGLE_KP -= stepSizes[stepIndex];
-            } else if (gamepad2.dpadRightWasPressed()) {
-                drivetrain.ANGLE_KP += stepSizes[stepIndex];
-            }
-            if (gamepad2.dpadUpWasPressed()) {
-                drivetrain.ANGLE_KD += stepSizes[stepIndex];
-            } else if (gamepad2.dpadDownWasPressed()) {
-                drivetrain.ANGLE_KD -= stepSizes[stepIndex];
-            }
+        if (gamepad2.x) {
+            catapults.setShotPower(0.5);
+        } else if (gamepad2.y) {
+            catapults.setShotPower(0.7);
+        } else if (gamepad2.b) {
+            catapults.setShotPower(1);
         }
+
     }
 }
