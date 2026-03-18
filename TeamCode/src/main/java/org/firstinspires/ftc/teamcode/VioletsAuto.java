@@ -19,11 +19,13 @@ public class VioletsAuto extends OpMode {
         RETURN_CENTER
     }
     State state = State.START_CENTER;
+    double[] stepSizes = {0.1, 0.01, 0.001, 0.0001};
+    int stepIndex = 0;
 
     @Override
     public void init() {
         drivetrain.init(hardwareMap, telemetry);
-        drivetrain.setSpeed(0.25);
+        drivetrain.setSpeed(1);
     }
 
     @Override

@@ -21,7 +21,7 @@ public class Catapults {
     private final double CATAPULT_LAUNCH_TIME = 0.5;
     private final double LAUNCH_INTERVAL = 0.5;
     private final double CATAPULT_TOLERANCE = 0.01;
-    private final int TOUCH_SENSOR_TO_STOP_TICKS = 100;
+    private final int TOUCH_SENSOR_TO_STOP_TICKS = 120;
     private final int CATAPULT_RANGE = 2700;
     private int encoderOffset = 0;
     private double shotPower = 0.5;
@@ -87,6 +87,9 @@ public class Catapults {
 
     public void update() {
         catMaxBackPos = Math.max(catMaxBackPos, catapult1.getCurrentPosition());
+        telemetry.addData("state", state);
+        telemetry.addData("current power", getCatapultPos());
+        telemetry.addData("target", shotPower);
         telemetry.addData("catapult maximum encoder reading", catMaxBackPos);
         telemetry.addData("encoder touch sensor hit position", touchSensorHitEncoderTicks);
         switch(state) {
@@ -196,7 +199,7 @@ public class Catapults {
     }
 
     private double getCatapultPos() {
-        return (double) 1 - (double) catapult1.getCurrentPosition() / CATAPULT_RANGE;
+        return 1 - (double) (catapult1.getCurrentPosition() - encoderOffset) / CATAPULT_RANGE;
     }
     private void closeServos() {
         releases[0].setPosition(0.7);
@@ -211,10 +214,6 @@ public class Catapults {
         if (catapultsReleased[0] || catapultsReleased[1] || catapultsReleased[2]) {
             state = CatapultState.RELOAD_PULL_BACK;
         }
-    }
-
-    public boolean isBusy() {
-        return state != CatapultState.IDLE;
     }
 
     public void setMotif(int tagId) {
@@ -244,6 +243,14 @@ public class Catapults {
 
     public boolean isMotifSet() {
         return motifSet;
+    }
+
+    public boolean isBusy() {
+        return state != CatapultState.IDLE;
+    }
+
+    public boolean isLaunching() {
+        return state == CatapultState.AUTO_SHOOT;
     }
 
     public boolean[] getCatapultsFull() {

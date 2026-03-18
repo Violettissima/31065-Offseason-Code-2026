@@ -12,21 +12,15 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 
 public class Drivetrain {
-    private final double KP = 0;
-    private final double KI = 0;
-    private final double KD = 0;
+    public double KP = 0.05;
+    private final double XY_TOLERANCE = 1;
     public double ANGLE_KP = 0.02;
     public double ANGLE_KD = 0.000001;
+    private final double ANGLE_TOLERANCE = 5;
     private double lastAngleError = 0;
-    private double angleTolerance = 0.4;
     private double targetX;
     private double targetY;
     private double targetAngle;
-    private double lastYError;
-    private double lastXError;
-    private double xyTolerance = 0.5;
-    private double xIntegralSum = 0;
-    private double yIntegralSum = 0;
     private double speed = 1;
     private double lastTime = 0;
     private boolean isDrivetrainBusy = false;
@@ -71,10 +65,10 @@ public class Drivetrain {
     public void update(){
         switch (state) {
             case MOVING:
-                if (getX() > targetX - xyTolerance && getX() < targetX + xyTolerance &&
-                        getY() > targetY - xyTolerance && getY() < targetY + xyTolerance &&
-                        AngleUnit.normalizeDegrees(targetAngle - getH()) > -angleTolerance &&
-                        AngleUnit.normalizeDegrees(targetAngle - getH()) < angleTolerance) {
+                if (getX() > targetX - XY_TOLERANCE && getX() < targetX + XY_TOLERANCE &&
+                        getY() > targetY - XY_TOLERANCE && getY() < targetY + XY_TOLERANCE &&
+                        AngleUnit.normalizeDegrees(targetAngle - getH()) > -ANGLE_TOLERANCE &&
+                        AngleUnit.normalizeDegrees(targetAngle - getH()) < ANGLE_TOLERANCE) {
                     isDrivetrainBusy = false;
                     drive(0, 0, 0);
                 } else {
@@ -83,13 +77,9 @@ public class Drivetrain {
                 }
                 break;
             case AIMING:
-                lastXError = 0;
-                lastYError = 0;
                 break;
             case IDLE:
                 lastAngleError = 0;
-                lastXError = 0;
-                lastYError = 0;
                 break;
         }
         lastTime = timer.seconds();
@@ -98,34 +88,30 @@ public class Drivetrain {
     private void moveToPos(double x, double y, double h){
         double yError = y - getY();
         double xError = x - getX();
-        double elapsedTime = timer.seconds() - lastTime;
+        double angleError = AngleUnit.normalizeDegrees(h - getH());
 
-        xIntegralSum = xIntegralSum + xError * elapsedTime;
-        xIntegralSum = Range.clip(xIntegralSum, -10, 10);
-        double xDerivative = (xError - lastXError) / elapsedTime;
-        double right = KP * xError + KI * xIntegralSum + KD * xDerivative;
+        double right = KP * xError;
+        double forward = KP * yError;
+        double rotate = ANGLE_KP * -angleError;
 
-        yIntegralSum = yIntegralSum + yError * elapsedTime;
-        yIntegralSum = Range.clip(yIntegralSum, -10, 10);
-        double yDerivative = (yError - lastYError) / elapsedTime;
-        double forward = KP * yError + KI * yIntegralSum + KD * yDerivative;
+        forward = Math.signum(forward) * Math.max(.05, Math.abs(forward));
+        right = Math.signum(right) * Math.max(.05, Math.abs(right));
 
-        drive(forward, right, 0);
-        lastXError = xError;
-        lastYError = yError;
-        lastTime = timer.seconds();
-        telemetry.addData("x error", xError);
-        telemetry.addData("y error", yError);
+        drive(forward, right, rotate);
+
+        telemetry.addData("angle error", angleError);
+        telemetry.addData("heading", getH());
+        telemetry.addData("target h", targetAngle);
         telemetry.addData("forward", forward);
         telemetry.addData("right", right);
     }
 
-    public void temporaryDriveAndAim(double forward, double right, double defaultRotate, AprilTagDetection tag) {
+    public void driveAndAimWithDefault(double forward, double right, double defaultRotate, AprilTagDetection tag) {
         double rotate;
         if (tag != null) {
             double angleError = -tag.ftcPose.bearing;
             telemetry.addData("apriltag", "seen");
-            if (Math.abs(angleError) > angleTolerance) {
+            if (Math.abs(angleError) > ANGLE_TOLERANCE) {
                 double proportionalTerm = angleError * ANGLE_KP;
                 double elapsedTime = timer.seconds() - lastTime;
                 double derivativeTerm = (angleError - lastAngleError) / elapsedTime * ANGLE_KD;
@@ -152,7 +138,7 @@ public class Drivetrain {
         } else {
             angleError = getH();
         }
-        if (Math.abs(angleError) > angleTolerance) {
+        if (Math.abs(angleError) > ANGLE_TOLERANCE) {
             double proportionalTerm = angleError * ANGLE_KP;
             double elapsedTime = timer.seconds() - lastTime;
             double derivativeTerm = (angleError - lastAngleError) / elapsedTime * ANGLE_KD;
@@ -169,8 +155,6 @@ public class Drivetrain {
         targetX = x;
         targetY = y;
         targetAngle = h;
-        xIntegralSum = 0;
-        yIntegralSum = 0;
         state = DrivetrainState.MOVING;
     }
 
@@ -248,14 +232,6 @@ public class Drivetrain {
 
     public void setSpeed(double speed) {
         this.speed = speed;
-    }
-
-    public void setXyTolerance(double xyTolerance) {
-        this.xyTolerance = xyTolerance;
-    }
-
-    public void setAngleTolerance(double angleTolerance) {
-        this.angleTolerance = angleTolerance;
     }
 
     public void setIdle() {

@@ -23,7 +23,11 @@ public class VioletsTeleOp extends OpMode {
         drivetrain.init(hardwareMap, telemetry);
         muncher.init(hardwareMap);
         aprilTagWebcam.init(hardwareMap, telemetry);
-        drivetrain.setXyTolerance(1);
+    }
+
+    @Override
+    public void start() {
+        drivetrain.start();
     }
 
     @Override
@@ -58,7 +62,7 @@ public class VioletsTeleOp extends OpMode {
 
         if (aligning) {
             drivetrain.setAiming();
-            drivetrain.temporaryDriveAndAim(-gamepad1.left_stick_y, gamepad1.left_stick_x, gamepad1.right_stick_x, id20);
+            drivetrain.driveAndAimWithDefault(-gamepad1.left_stick_y, gamepad1.left_stick_x, gamepad1.right_stick_x, id20);
             telemetry.addLine("Aiming");
         } else if (gamepad1.left_bumper) {
             drivetrain.setIdle();
@@ -98,13 +102,7 @@ public class VioletsTeleOp extends OpMode {
             drivetrain.resetOtos();
         }
 
-        if (gamepad2.x) {
-            catapults.setShotPower(0.5);
-        } else if (gamepad2.y) {
-            catapults.setShotPower(0.7);
-        } else if (gamepad2.b) {
-            catapults.setShotPower(1);
-        }
+
 
     }
 }
