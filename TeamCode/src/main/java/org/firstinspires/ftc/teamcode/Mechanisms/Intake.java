@@ -28,7 +28,7 @@ public class Intake {
 
     public void setSpeed(double speed) {
         intake1.setPower(speed);
-        intake2.setPower(speed);
+        intake2.setPower(-speed);
     }
 
     public void moveGuides(Direction direction) {

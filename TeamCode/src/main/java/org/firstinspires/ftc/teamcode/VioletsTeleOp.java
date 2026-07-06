@@ -32,7 +32,7 @@ public class VioletsTeleOp extends OpMode {
 
     @Override
     public void loop(){
-        catapults.update();
+        //catapults.update();
         drivetrain.update();
         aprilTagWebcam.update();
         catapults.setMotif(aprilTagWebcam.getMotif());
