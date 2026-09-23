@@ -59,6 +59,7 @@ public class VioletsTeleOp extends OpMode {
         } else {
             drivetrain.setSpeed(1);
         }
+        drivetrain.setSpeed(0.6);
 
         if (aligning) {
             drivetrain.setAiming();
